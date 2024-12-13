@@ -1,0 +1,7 @@
+000000000000000000000000000000000000000000000002832ed7xfxbxex5xe
+13zb1hQbWVsc2S7ZTZnP2G4undNNpdh5so
+
+
+----------- A primeira linha é a chave parcial e a segunda é o endereço -----------
+
+--- A chave acima é para testes, o Resultado deve ser 000000000000000000000000000000000000000000000002832ed74f2b5e35ee ---
