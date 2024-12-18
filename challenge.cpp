@@ -447,20 +447,24 @@ int main(int argc, char* argv[]){
         std::cout << reset << "\n Processes: "<< green << num_processes << reset << " Threads: " << green << num_threads << std::endl;
         std::cout.imbue(std::locale("pt_BR.UTF-8"));
 
-        if (total_batches){
+        if (xcounter <= 11){
             std::cout << reset << "\n Total Batches to be verified: " << green << total_batches << "" << std::endl;  
-        }
-
-        if (random_prefixes.size() > 0) {
-            std::cout << reset << " Already Verified Batches: " << green << random_prefixes.size() << "\n" << std::endl;  
+            if (random_prefixes.size() > 0) {
+                std::cout << reset << " Already Verified Batches: " << green << random_prefixes.size() << "\n" << std::endl;  
+            }
         }
 
         if (target_address == "13zb1hQbWVsc2S7ZTZnP2G4undNNpdh5so"){
             std::cout << red << "\n ------ Testing with puzzle 66 address ------\n" << std::endl;
         }
 
-        auto start_time = std::chrono::high_resolution_clock::now();
         std::int64_t already_verified = random_prefixes.size();
+        if (total_batches <= already_verified && total_batches > 1){
+            std::cout << red << "Key already found, check key.txt with command 'cat key.txt', if not, delete all .txt" << std::endl;
+            kill(0, SIGKILL);
+        }
+
+        auto start_time = std::chrono::high_resolution_clock::now();
 
         while (!found) {
             std::this_thread::sleep_for(std::chrono::milliseconds(refresh_time * 1000));
@@ -477,8 +481,14 @@ int main(int argc, char* argv[]){
 
             std::cout.imbue(std::locale("pt_BR.UTF-8"));
             std::cout << reset << "\r Speed: " << green << keys_per_second 
-            << reset << " Keys/s - Verified Keys: " << green << keys_verified 
-            << reset << " - ETA: " <<  green << eta <<reset << " days  " << reset << std::flush;
+            << reset << " Keys/s - Verified Keys: " << green << keys_verified;
+            
+            if (xcounter <= 11){
+                std::cout << reset << " - ETA: " <<  green << eta <<reset << " days  " << reset;
+            }
+
+            std::cout << std::flush;
+            
         }
 
     }
