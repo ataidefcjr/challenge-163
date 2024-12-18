@@ -13,20 +13,27 @@
 #include <chrono>
 #include "base58.cpp"
 #include <fstream>
+#include <iomanip>
+#include <locale>
+#include <algorithm>
+#include <sstream>
 #include "base58.h"
 
-int batch_size = 65536;
-int refresh_time = 2;
-int num_threads = 4;
-int num_processes = 3; 
+int batch_size = 65536; //Do not change, equals to 16 ^ 4
+int refresh_time;
+int num_threads;
+int num_processes; 
+int save = 0;
 
 // Global Variables
 static secp256k1_context *ctx = secp256k1_context_create(SECP256K1_CONTEXT_SIGN);
 std::string const hex_chars = "0123456789abcdef";
+std::vector<std::string> random_prefixes;
 
 std::string partial_key;
 std::string target_address;
 std::vector<unsigned char> decoded_target_address;
+std::vector<int> x_positions;
 
 volatile int found = 0; 
 pthread_mutex_t file_lock = PTHREAD_MUTEX_INITIALIZER;
@@ -84,21 +91,74 @@ int validate_input(int value, const std::string& prompt) {
     return value;
 }
 
+std::string generate_random_prefix(){
+    static std::random_device rd;
+    static std::mt19937 gen(rd()+14061995);
+
+    std::stringstream ss;
+    for (int i=0; i<x_positions.size() - 4; i++){
+        ss << std::hex << hex_chars[gen()%16];
+    }
+
+    return ss.str();
+
+}
+
 // Função para gerar as chaves
 void generate_random_key(std::vector<std::string> &output_key) {
-    static std::random_device rd;
-    static std::mt19937 gen(rd()+140695);
+    unsigned int sequential_counter = 0;
+
+    std::string random_prefix;
+
+    // Gera um prefixo único
+    do {
+        random_prefix = generate_random_prefix();
+    } while (std::find(random_prefixes.begin(), random_prefixes.end(), random_prefix) != random_prefixes.end());
     
+    // Adiciona o novo prefixo ao vetor
+    random_prefixes.push_back(random_prefix);
+
     //Itera sobre o array de chaves
-    for(int position=0; position < output_key.size(); position++){
-        //Itera sobre cada chave
-        for (int i = 0; i < 64; i++) {
-            if (partial_key[i] == 'x') {
-                output_key[position][i] = hex_chars[(gen() % 16)]; // Substitui 'x' por um caractere aleatório
-            } else {
-                output_key[position][i] = partial_key[i]; // Mantém os caracteres que não são 'x'
+    for (int position = 0; position < output_key.size(); position ++){
+
+        std::string new_key = partial_key;
+
+        // Adicionar os x aleatórios
+        int x_index = 0;
+        for (int i = 0; i < partial_key.size(); i++){
+            if (partial_key[i] == 'x' && x_index < x_positions.size()-4) {
+                new_key[i] = random_prefix[x_index++];
             }
         }
+
+        // Geração dos 4 últimos 'x's sequenciais
+        std::stringstream seq_ss;
+        seq_ss << std::hex << std::setw(4) << std::setfill('0') << sequential_counter;
+        std::string seq = seq_ss.str();
+        
+        // Substitui os últimos 'x's com a sequência
+        x_index = 0;
+        for (int i = partial_key.size() - 1; i >= 0 && x_index < 4; i--) {
+            if (partial_key[i] == 'x') {
+                new_key[i] = seq[x_index++];
+            }
+        }
+
+        // Incrementa o contador sequencial
+        sequential_counter++;
+
+        // Armazena a chave gerada no vetor de saída
+        output_key[position] = new_key;
+
+    }
+
+    //Salva o prefixo em um arquivo
+    if (save) {
+        pthread_mutex_lock(&file_lock);
+        std::ofstream output_file(partial_key + ".txt", std::ios::out | std::ios::app);
+        output_file << random_prefix << std::endl;  
+        output_file.close();
+        pthread_mutex_unlock(&file_lock);
     }
 }
 
@@ -127,8 +187,7 @@ std::vector<uint8_t> hexStringToBytes(const std::string& hex_str) {
 
 // Função principal para converter uma chave privada em endereço Bitcoin
 void privateKeyToBitcoinAddress(std::vector<std::vector<uint8_t>> &generated_addresses,
-                                std::vector<std::string> &generated_keys,
-                                int thread_id){
+                                std::vector<std::string> &generated_keys){
 
     std::vector<uint8_t> publicKey(33);
     std::vector<uint8_t> sha256Buffer(32);
@@ -179,16 +238,14 @@ void privateKeyToBitcoinAddress(std::vector<std::vector<uint8_t>> &generated_add
         std::copy(sha256Buffer.begin(), sha256Buffer.begin() + 4, finalHash.begin() + 21);
 
         generated_addresses[i] = finalHash;
-
-        global_counter[thread_id] ++;
     }
 }
 
 // Função de comparação entre o endereço gerado e o alvo
-int check_key(std::vector<std::string> &generated_keys, int thread_id){
+int check_key(std::vector<std::string> &generated_keys){
 
     std::vector<std::vector<uint8_t>> generated_addresses(batch_size);
-    privateKeyToBitcoinAddress(generated_addresses, generated_keys, thread_id);
+    privateKeyToBitcoinAddress(generated_addresses, generated_keys);
     
     for (int i=0; i < batch_size; i++) {
         if (generated_addresses[i] == decoded_target_address){
@@ -240,12 +297,13 @@ void *bruteforce_worker(void *args)
     ThreadArgs *thread_args = (ThreadArgs *)args;
     std::vector<std::string> generated_key(thread_args->batch_size, std::string(64, ' '));
     
-    std::this_thread::sleep_for(std::chrono::milliseconds((thread_args->thread_id + 1) * 37));
+    std::this_thread::sleep_for(std::chrono::milliseconds((thread_args->thread_id + 1) * 137));
 
     while (!found)
     { // Continue enquanto nenhuma thread encontrar a chave
         generate_random_key(generated_key);
-        if (int position = check_key(generated_key, thread_args->thread_id))
+
+        if (int position = check_key(generated_key))
         {
             found = 1; // Sinaliza que a chave foi encontrada
 
@@ -284,10 +342,25 @@ void print_help(){
     std::cout << reset << "  Donations: " << yellow << "bc1qych3lyjyg3cse6tjw7m997ne83fyye4des99a9\n" << std::endl ;
 }
 
-int main(int argc, char* argv[]){
+void load_checked(){
+    std::ifstream inputFile(partial_key + ".txt");
+    if (!inputFile.is_open()) {
+        return;
+    }
 
-    num_processes = 1;
-    num_threads = 4;
+    std::string line;
+    while (std::getline(inputFile,line)){
+        random_prefixes.push_back(line);
+    };
+
+    inputFile.close();
+    return;
+}
+
+int main(int argc, char* argv[]){
+    refresh_time = 2;
+    num_processes = 2;
+    num_threads = 6;
     int opt;
     std::string config_file = "config.txt";
 
@@ -321,14 +394,21 @@ int main(int argc, char* argv[]){
     decodeBase58(target_address, decoded_target_address);
 
     int xcounter = 0;
-
     for (int i=0; i<partial_key.size(); i++){
         if (partial_key[i] == 'x'){
             xcounter ++;
+            x_positions.push_back(i);
         }
     }
 
+    if (xcounter <= 11){
+        save = 1;
+    }
+
     global_counter.resize(num_threads);
+
+    // Carrega os prefixos já pesquisados na memória
+    load_checked();
 
     pid_t pid;
 
@@ -354,36 +434,51 @@ int main(int argc, char* argv[]){
     //Informações sobre a carteira e a chave parcial
     if ( pid != 0 || num_processes == 1){
 
+        std::int64_t total_batches = 1;
+        for (int i=0; i < xcounter - 4 ; i++){
+            total_batches *= 16;
+        }
+
         std::cout << reset << "\n Made by " << yellow << "Ataide Freitas" << blue << " https://github.com/ataidefcjr" << std::endl;
-        std::cout << reset << " Donations: " << yellow << "bc1qych3lyjyg3cse6tjw7m997ne83fyye4des99a9\n" << std::endl ;
-        std::cout << reset << " Starting search on Address: " << green << target_address << std::endl;
+        std::cout << reset << " Donations: " << yellow << "bc1qych3lyjyg3cse6tjw7m997ne83fyye4des99a9" << std::endl ;
+        std::cout << reset << "\n Starting search on Address: " << green << target_address << std::endl;
         std::cout << reset << " Partial Key: " << green << partial_key << std::endl;
         std::cout << reset << " Difficult: "<< red << xcounter * 4 << " bits"<< std::endl;
         std::cout << reset << "\n Processes: "<< green << num_processes << reset << " Threads: " << green << num_threads << std::endl;
+        std::cout.imbue(std::locale("pt_BR.UTF-8"));
+
+        if (total_batches){
+            std::cout << reset << "\n Total Batches to be verified: " << green << total_batches << "" << std::endl;  
+        }
+
+        if (random_prefixes.size() > 0) {
+            std::cout << reset << " Already Verified Batches: " << green << random_prefixes.size() << "\n" << std::endl;  
+        }
 
         if (target_address == "13zb1hQbWVsc2S7ZTZnP2G4undNNpdh5so"){
             std::cout << red << "\n ------ Testing with puzzle 66 address ------\n" << std::endl;
         }
 
         auto start_time = std::chrono::high_resolution_clock::now();
+        std::int64_t already_verified = random_prefixes.size();
 
         while (!found) {
             std::this_thread::sleep_for(std::chrono::milliseconds(refresh_time * 1000));
 
             auto current_time = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double> elapsed = current_time - start_time;
-            int total;
-            for (int i=0; i < global_counter.size(); i++){
-                pthread_mutex_lock(&counter_lock);
-                total += global_counter[i];
-                global_counter[i] = 0;
-                pthread_mutex_unlock(&counter_lock);
-            }
-            double keys_per_second = (total * num_processes) / elapsed.count();
+    
+            std::int64_t keys_verified = batch_size * (random_prefixes.size() - already_verified) * num_processes;
 
-            std::cout << cyan << "\r Speed: " << keys_per_second << " Keys/s  "<< reset << std::flush;
-            total = 0;
-            start_time = std::chrono::high_resolution_clock::now();
+            std::double_t keys_per_second = keys_verified / elapsed.count();
+            
+            std::double_t batches_per_second = keys_per_second / batch_size;
+            std::double_t eta = ((total_batches - random_prefixes.size()) / batches_per_second) / 60 / 60 / 24;
+
+            std::cout.imbue(std::locale("pt_BR.UTF-8"));
+            std::cout << reset << "\r Speed: " << green << keys_per_second 
+            << reset << " Keys/s - Verified Keys: " << green << keys_verified 
+            << reset << " - ETA: " <<  green << eta <<reset << " days  " << reset << std::flush;
         }
 
     }
