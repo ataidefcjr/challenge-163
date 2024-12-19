@@ -19,6 +19,6 @@ Altere o arquivo config.txt, na primeira linha do arquivo coloque a chave privad
 
 Após isso é só executar o programa
 
-`./challenge -t 6`
+`./challenge -h`
 
     
