@@ -445,7 +445,7 @@ int main(int argc, char* argv[]){
         std::cout << reset << " Partial Key: " << green << partial_key << std::endl;
         std::cout << reset << " Difficult: "<< red << xcounter * 4 << " bits"<< std::endl;
         std::cout << reset << "\n Processes: "<< green << num_processes << reset << " Threads: " << green << num_threads << std::endl;
-        std::cout.imbue(std::locale("pt_BR.UTF-8"));
+        std::cout.imbue(std::locale("C.UTF-8"));
 
         if (xcounter <= 11){
             std::cout << reset << "\n Total Batches to be verified: " << green << total_batches << "" << std::endl;  
@@ -479,7 +479,7 @@ int main(int argc, char* argv[]){
             std::double_t batches_per_second = keys_per_second / batch_size;
             std::double_t eta = ((total_batches - random_prefixes.size()) / batches_per_second) / 60 / 60 / 24;
 
-            std::cout.imbue(std::locale("pt_BR.UTF-8"));
+            std::cout.imbue(std::locale("C.UTF-8"));
             std::cout << reset << "\r Speed: " << green << keys_per_second 
             << reset << " Keys/s - Verified Keys: " << green << keys_verified;
             
