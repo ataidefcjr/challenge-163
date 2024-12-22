@@ -84,8 +84,8 @@ KeyConfig readConfigFromFile(const std::string &filename) {
 
 // Valida os inputs
 int validate_input(int value, const std::string& prompt) {
-    if (value < 1 || value > 24) {
-        std::cerr << "Error: " << prompt << " must be between 1 and 24 " << std::endl;
+    if (value < 1 || value > 128) {
+        std::cerr << "Error: " << prompt << " must be between 1 and 128 " << std::endl;
         exit(1); 
     }
     return value;
@@ -173,18 +173,6 @@ std::vector<uint8_t> hexToBytes(const std::string &hex)
     return bytes;
 }
 
-// Função para converter uma string hexadecimal para std::vector<uint8_t>
-std::vector<uint8_t> hexStringToBytes(const std::string& hex_str) {
-    std::vector<uint8_t> bytes;
-    for (size_t i = 0; i < hex_str.length(); i += 2) {
-        std::string byteString = hex_str.substr(i, 2);
-        uint8_t byte = (uint8_t) strtol(byteString.c_str(), nullptr, 16);
-        bytes.push_back(byte);
-    }
-    return bytes;
-}
-
-
 // Função principal para converter uma chave privada em endereço Bitcoin
 void privateKeyToBitcoinAddress(std::vector<std::vector<uint8_t>> &generated_addresses,
                                 std::vector<std::string> &generated_keys){
@@ -259,21 +247,29 @@ int check_key(std::vector<std::string> &generated_keys){
 //Private Key to WIF
 std::string privateKeyToWIF(const std::string private_key_str) {
     // Passo 1: Adicionar o prefixo 0x80
-    std::vector<uint8_t> private_key = hexStringToBytes(private_key_str);
+    std::vector<uint8_t> private_key = hexToBytes(private_key_str);
+
+    // Verifique se a chave privada tem 32 bytes
+    if (private_key.size() != 32) {
+        throw std::runtime_error("Chave privada deve ter 32 bytes.");
+    }
 
     std::vector<uint8_t> extended_key;
     extended_key.push_back(0x80);  // Prefixo para Bitcoin WIF
     extended_key.insert(extended_key.end(), private_key.begin(), private_key.end());
+    extended_key.push_back(0x01);   // Sufixo para chave comprimida
 
     // Passo 2: Calcular o checksum
     uint8_t hash1[SHA256_DIGEST_LENGTH];
+    uint8_t hash2[SHA256_DIGEST_LENGTH];
     SHA256_CTX sha256_ctx;
 
+    // Calcular o primeiro hash
     SHA256_Init(&sha256_ctx);
     SHA256_Update(&sha256_ctx, extended_key.data(), extended_key.size());
     SHA256_Final(hash1, &sha256_ctx);
 
-    uint8_t hash2[SHA256_DIGEST_LENGTH];
+    // Calcular o segundo hash
     SHA256_Init(&sha256_ctx);
     SHA256_Update(&sha256_ctx, hash1, SHA256_DIGEST_LENGTH);
     SHA256_Final(hash2, &sha256_ctx);
@@ -332,8 +328,8 @@ void *bruteforce_worker(void *args)
 void print_help(){
     std::cout << "\n Usage: ./challenge [-t <threads_number>] [-p <processes_number>] [-i <configfile.txt>] [-h]" << std::endl;
     std::cout << "\n Options:" << std::endl;
-    std::cout << "    -t <threads_number>    Set the number of threads (default: 4)" << std::endl;
-    std::cout << "    -p <processes_number>  Set the number of processes (default: 1)" << std::endl;
+    std::cout << "    -t <threads_number>    Set the number of threads (default: 6)" << std::endl;
+    std::cout << "    -p <processes_number>  Set the number of processes (default: 2)" << std::endl;
     std::cout << "    -i <config_file>       Set the configuration file (default: config.txt)" << std::endl;
     std::cout << "    -h                     Show this message\n" << std::endl;
     std::cout << "    The config file must have partial key on first line and address on second line" << std::endl;
