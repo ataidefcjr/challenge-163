@@ -353,14 +353,34 @@ void load_checked(){
     return;
 }
 
+void testSpeed(){
+    
+
+    // Generate Random Key Time Calculator    
+    auto generate_start_time = std::chrono::high_resolution_clock::now();
+    std::vector<std::string> generated_key(batch_size, std::string(64, ' '));
+    generate_random_key(generated_key);
+    auto generate_finish_time = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> generate_elapsed = generate_finish_time - generate_start_time;
+    std::cout << "Time to generate random " << batch_size << " Keys: " << generate_elapsed.count()*1000 << " ms." << std::endl;
+
+    auto check_start_time = std::chrono::high_resolution_clock::now();
+    int position = check_key(generated_key);
+    auto check_finish_time = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> check_elapsed = check_finish_time - check_start_time;
+    std::cout << "Time to create and check adresses " << batch_size << " Keys: " << check_elapsed.count()*1000 << " ms." << std::endl;
+
+}
+
 int main(int argc, char* argv[]){
     refresh_time = 2;
     num_processes = 2;
     num_threads = 6;
     int opt;
     std::string config_file = "config.txt";
+    int teste = 0;
 
-    while ((opt = getopt(argc, argv, "t:p:i:h")) != -1) {
+    while ((opt = getopt(argc, argv, "t:p:i:h:x")) != -1) {
         switch (opt) {
             case 't':
                 num_threads = std::atoi(optarg);
@@ -372,6 +392,9 @@ int main(int argc, char* argv[]){
                 break;
             case 'i':
                 config_file = optarg; 
+                break;
+            case 'x':
+                teste = 1;
                 break;
             case 'h':
                 print_help(); 
@@ -405,6 +428,11 @@ int main(int argc, char* argv[]){
 
     // Carrega os prefixos já pesquisados na memória
     load_checked();
+
+    if (teste) {
+        testSpeed();
+        exit(1);
+    }
 
     pid_t pid;
 
