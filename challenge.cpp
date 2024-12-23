@@ -328,12 +328,13 @@ void *bruteforce_worker(void *args)
 void print_help(){
     std::cout << "\n Usage: ./challenge [-t <threads_number>] [-p <processes_number>] [-i <configfile.txt>] [-h]" << std::endl;
     std::cout << "\n Options:" << std::endl;
-    std::cout << "    -t <threads_number>    Set the number of threads (default: 6)" << std::endl;
-    std::cout << "    -p <processes_number>  Set the number of processes (default: 2)" << std::endl;
+    std::cout << "    -t <threads_number>    Set the number of threads (default: 2)" << std::endl;
+    std::cout << "    -p <processes_number>  Set the number of processes (default: 6)" << std::endl;
     std::cout << "    -i <config_file>       Set the configuration file (default: config.txt)" << std::endl;
     std::cout << "    -h                     Show this message\n" << std::endl;
     std::cout << "    The config file must have partial key on first line and address on second line" << std::endl;
-    std::cout << "    I Suggest to use only threads options, half of your processor cores looks good\n" << std::endl;
+    std::cout << "    Processes multiplicate Threads, be aware of high values.\n" << std::endl;
+    std::cout << "    I suggest to use -p (half of cores your processor has) and -t 2\n" << std::endl;
     std::cout << reset << "  Made by " << yellow << "Ataide Freitas" << blue << " https://github.com/ataidefcjr" << std::endl;
     std::cout << reset << "  Donations: " << yellow << "bc1qych3lyjyg3cse6tjw7m997ne83fyye4des99a9\n" << std::endl ;
 }
@@ -354,28 +355,31 @@ void load_checked(){
 }
 
 void testSpeed(){
-    
-
+    int mult = 1;
     // Generate Random Key Time Calculator    
     auto generate_start_time = std::chrono::high_resolution_clock::now();
     std::vector<std::string> generated_key(batch_size, std::string(64, ' '));
+    for (int i=0; i< mult; i++){
     generate_random_key(generated_key);
+    }
     auto generate_finish_time = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> generate_elapsed = generate_finish_time - generate_start_time;
-    std::cout << "Time to generate random " << batch_size << " Keys: " << generate_elapsed.count()*1000 << " ms." << std::endl;
+    std::cout << "Time to generate random " << batch_size*mult << " Keys: " << generate_elapsed.count()*1000 << " ms." << std::endl;
 
     auto check_start_time = std::chrono::high_resolution_clock::now();
+    for (int i=0; i< mult; i++){
     int position = check_key(generated_key);
+    }
     auto check_finish_time = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> check_elapsed = check_finish_time - check_start_time;
-    std::cout << "Time to create and check adresses " << batch_size << " Keys: " << check_elapsed.count()*1000 << " ms." << std::endl;
+    std::cout << "Time to create and check: " << batch_size*mult << " Addresses: " << check_elapsed.count()*1000 << " ms." << std::endl;
 
 }
 
 int main(int argc, char* argv[]){
     refresh_time = 2;
-    num_processes = 2;
-    num_threads = 6;
+    num_processes = 6;
+    num_threads = 2;
     int opt;
     std::string config_file = "config.txt";
     int teste = 0;
