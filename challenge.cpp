@@ -105,7 +105,7 @@ std::string generate_random_prefix(){
 }
 
 // Função para gerar as chaves
-void generate_random_key(std::vector<std::string> &output_key) {
+std::string generate_random_key(std::vector<std::string> &output_key) {
     unsigned int sequential_counter = 0;
 
     std::string random_prefix;
@@ -151,15 +151,7 @@ void generate_random_key(std::vector<std::string> &output_key) {
         output_key[position] = new_key;
 
     }
-
-    //Salva o prefixo em um arquivo
-    if (save) {
-        pthread_mutex_lock(&file_lock);
-        std::ofstream output_file(partial_key + ".txt", std::ios::out | std::ios::app);
-        output_file << random_prefix << std::endl;  
-        output_file.close();
-        pthread_mutex_unlock(&file_lock);
-    }
+    return random_prefix;
 }
 
 // Converter hex para bytes
@@ -185,7 +177,6 @@ void privateKeyToBitcoinAddress(std::vector<std::vector<uint8_t>> &generated_add
 
     RIPEMD160_CTX rctx;
     SHA256_CTX sctx;
-
 
     for (int i = 0; i < generated_keys.size(); i++) {
         std::vector<uint8_t> privateKeyBytes = hexToBytes(generated_keys[i]);
@@ -230,7 +221,7 @@ void privateKeyToBitcoinAddress(std::vector<std::vector<uint8_t>> &generated_add
 }
 
 // Função de comparação entre o endereço gerado e o alvo
-int check_key(std::vector<std::string> &generated_keys){
+int check_key(std::vector<std::string> &generated_keys, std::string prefix){
 
     std::vector<std::vector<uint8_t>> generated_addresses(batch_size);
     privateKeyToBitcoinAddress(generated_addresses, generated_keys);
@@ -239,6 +230,14 @@ int check_key(std::vector<std::string> &generated_keys){
         if (generated_addresses[i] == decoded_target_address){
             return i;
         }
+    }
+
+    if (save) {
+        pthread_mutex_lock(&file_lock);
+        std::ofstream output_file(partial_key + ".txt", std::ios::out | std::ios::app);
+        output_file << prefix << std::endl;  
+        output_file.close();
+        pthread_mutex_unlock(&file_lock);
     }
     
     return 0;
@@ -297,9 +296,9 @@ void *bruteforce_worker(void *args)
 
     while (!found)
     { // Continue enquanto nenhuma thread encontrar a chave
-        generate_random_key(generated_key);
+        std::string prefix = generate_random_key(generated_key);
 
-        if (int position = check_key(generated_key))
+        if (int position = check_key(generated_key, prefix))
         {
             found = 1; // Sinaliza que a chave foi encontrada
 
@@ -307,7 +306,7 @@ void *bruteforce_worker(void *args)
 
             std::cout << "\n\n-------------------------------------------------------------------------------------------"
                       << "\n------- Found Key: " << generated_key[position] << " -------" 
-                      << "\n---------------- WIF: " << wif << " -----------------" 
+                      << "\n---------------- WIF: " << wif << " ----------------" 
                       << "\n-------------------------------------------------------------------------------------------\n" 
                       << std::endl;
 
@@ -369,7 +368,7 @@ void testSpeed(){
 
     auto check_start_time = std::chrono::high_resolution_clock::now();
     for (int i=0; i< mult; i++){
-    int position = check_key(generated_key);
+    int position = check_key(generated_key, "teste");
     }
     auto check_finish_time = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> check_elapsed = check_finish_time - check_start_time;
