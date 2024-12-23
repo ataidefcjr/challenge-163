@@ -397,7 +397,7 @@ int main(int argc, char* argv[]){
         }
     }
 
-    if (xcounter <= 11){
+    if (xcounter <= 11 && target_address != "13zb1hQbWVsc2S7ZTZnP2G4undNNpdh5so"){
         save = 1;
     }
 
