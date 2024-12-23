@@ -330,7 +330,8 @@ void print_help(){
     std::cout << "\n Options:" << std::endl;
     std::cout << "    -t <threads_number>    Set the number of threads (default: 2)" << std::endl;
     std::cout << "    -p <processes_number>  Set the number of processes (default: 6)" << std::endl;
-    std::cout << "    -i <config_file>       Set the configuration file (default: config.txt)" << std::endl;
+    std::cout << "    -i <config_file>       Set the configuration file (default: config.txt), only to less 44 bits difficult" << std::endl;
+    std::cout << "    -s                     Save your progress on {partial_key}.txt" << std::endl;
     std::cout << "    -h                     Show this message\n" << std::endl;
     std::cout << "    The config file must have partial key on first line and address on second line" << std::endl;
     std::cout << "    Processes multiplicate Threads, be aware of high values.\n" << std::endl;
@@ -383,8 +384,9 @@ int main(int argc, char* argv[]){
     int opt;
     std::string config_file = "config.txt";
     int teste = 0;
+    int canSave = 0;
 
-    while ((opt = getopt(argc, argv, "t:p:i:h:x")) != -1) {
+    while ((opt = getopt(argc, argv, "t:p:i:x:h:s")) != -1) {
         switch (opt) {
             case 't':
                 num_threads = std::atoi(optarg);
@@ -403,6 +405,9 @@ int main(int argc, char* argv[]){
             case 'h':
                 print_help(); 
                 return 0;
+            case 's':
+                canSave = 1; 
+                break;
             default:
                 std::cerr << "\n Invalid Input." << std::endl;
                 print_help();
@@ -424,7 +429,7 @@ int main(int argc, char* argv[]){
         }
     }
 
-    if (xcounter <= 11 && target_address != "13zb1hQbWVsc2S7ZTZnP2G4undNNpdh5so"){
+    if (xcounter <= 11 && target_address != "13zb1hQbWVsc2S7ZTZnP2G4undNNpdh5so" && canSave){
         save = 1;
     }
 
