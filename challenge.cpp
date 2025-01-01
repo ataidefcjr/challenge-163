@@ -537,7 +537,7 @@ int main(int argc, char* argv[]){
             std::cout << reset << "\r Speed: " << green << keys_per_second 
             << reset << " Keys/s - Verified Keys: " << green << keys_verified;
             
-            if (xcounter <= 11){
+            if (xcounter <= 13){
                 std::cout << reset << " - ETA: " <<  green << eta <<reset << " days  " << reset;
             }
 
