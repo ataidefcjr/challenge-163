@@ -8,10 +8,11 @@ Como funciona o desafio: https://www.youtube.com/watch?v=4JAquWro4rg
 
 # Uso
 
-Instale as bibliotecas e compile o código
+Instale as bibliotecas, dependências e compile o código
 ```bash
 sudo apt update
-sudo apt install libsecp256k1-dev libssl-dev -y
+sudo apt install libsecp256k1-dev libssl-dev git make g++ python3 python3-pip -y
+pip3 install bit
 make && ./challenge -h
 ```
 

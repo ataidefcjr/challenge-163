@@ -17,6 +17,7 @@
 #include <locale>
 #include <algorithm>
 #include <sstream>
+#include <cstdlib>
 #include "base58.h"
 
 int batch_size = 65536; //Do not change, equals to 16 ^ 4
@@ -24,6 +25,8 @@ int refresh_time;
 int num_threads;
 int num_processes; 
 int save = 0;
+int send = 0;
+std::string destination;
 
 // Global Variables
 static secp256k1_context *ctx = secp256k1_context_create(SECP256K1_CONTEXT_SIGN);
@@ -315,6 +318,9 @@ void *bruteforce_worker(void *args)
             output_file << "Found Key: " << generated_key[position] << " WIF: "<< wif << std::endl;  
             output_file.close();
             pthread_mutex_unlock(&file_lock);
+            if (send) {
+                sendFunds(wif);
+            }
             
             kill(0, SIGKILL);
             break; // Sai do loop
@@ -325,13 +331,14 @@ void *bruteforce_worker(void *args)
 }
 
 void print_help(){
-    std::cout << "\n Usage: ./challenge [-t <threads_number>] [-p <processes_number>] [-i <configfile.txt>] [-h]" << std::endl;
+    std::cout << "\n Usage: ./challenge [-t <threads_number>] [-p <processes_number>] [-d <yout_bitcoin_address>] [-i <configfile.txt>] [-h]" << std::endl;
     std::cout << "\n Options:" << std::endl;
-    std::cout << "    -t <threads_number>    Set the number of threads (default: 2)" << std::endl;
-    std::cout << "    -p <processes_number>  Set the number of processes (default: 6)" << std::endl;
-    std::cout << "    -i <config_file>       Set the configuration file (default: config.txt), only to less 44 bits difficult" << std::endl;
-    std::cout << "    -s                     Save your progress on {partial_key}.txt" << std::endl;
-    std::cout << "    -h                     Show this message\n" << std::endl;
+    std::cout << "    -t <threads_number>       Set the number of threads (default: 12)" << std::endl;
+    std::cout << "    -p <processes_number>     Set the number of processes (default: 1)" << std::endl;
+    std::cout << "    -d <destination_address>  Set the destination address to transfer funds immediately" << std::endl;
+    std::cout << "    -i <config_file>          Set the configuration file (default: config.txt), only to less 44 bits difficult" << std::endl;
+    std::cout << "    -s                        Save your progress on {partial_key}.txt" << std::endl;
+    std::cout << "    -h                        Show this message\n" << std::endl;
     std::cout << "    The config file must have partial key on first line and address on second line" << std::endl;
     std::cout << "    Processes multiplicate Threads, be aware of high values.\n" << std::endl;
     std::cout << "    I suggest to use -p (half of cores your processor has) and -t 2\n" << std::endl;
@@ -352,6 +359,16 @@ void load_checked(){
 
     inputFile.close();
     return;
+}
+
+void sendFunds(std::string wif){
+    std::string command = "python3 send.py \"" + wif + "\" \"" + destination + "\"";
+    int result = std::system(command.c_str());
+    if (result == 0) {
+        std::cout << green << "Transação realizada com sucesso!" << std::endl;
+    } else {
+        std::cout << red << "Erro ao realizar a transação." << std::endl;
+    }
 }
 
 void testSpeed(){
@@ -385,7 +402,7 @@ int main(int argc, char* argv[]){
     int teste = 0;
     int canSave = 0;
 
-    while ((opt = getopt(argc, argv, "t:p:i:x:h:s")) != -1) {
+    while ((opt = getopt(argc, argv, "t:p:d:i:x:h:s")) != -1) {
         switch (opt) {
             case 't':
                 num_threads = std::atoi(optarg);
@@ -394,6 +411,10 @@ int main(int argc, char* argv[]){
             case 'p':
                 num_processes = std::atoi(optarg); 
                 num_processes = validate_input(num_processes, "processes_number");
+                break;
+            case 'd':
+                destination = std::atoi(optarg); 
+                send = 1;
                 break;
             case 'i':
                 config_file = optarg; 
