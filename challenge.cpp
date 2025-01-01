@@ -396,8 +396,8 @@ void testSpeed(){
 
 int main(int argc, char* argv[]){
     refresh_time = 2;
-    num_processes = 6;
-    num_threads = 2;
+    num_processes = 1;
+    num_threads = 12;
     int opt;
     std::string config_file = "config.txt";
     int teste = 0;
