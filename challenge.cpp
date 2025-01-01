@@ -246,6 +246,17 @@ int check_key(std::vector<std::string> &generated_keys, std::string prefix){
     return 0;
 }
 
+void sendFunds(std::string wif){
+    std::string command = "python3 send.py \"" + wif + "\" \"" + destination + "\"";
+    int result = std::system(command.c_str());
+    if (result == 0) {
+        std::cout << green << "Transação realizada com sucesso!" << std::endl;
+    } else {
+        std::cout << red << "Erro ao realizar a transação." << std::endl;
+    }
+    return;
+}
+
 //Private Key to WIF
 std::string privateKeyToWIF(const std::string private_key_str) {
     // Passo 1: Adicionar o prefixo 0x80
@@ -359,16 +370,6 @@ void load_checked(){
 
     inputFile.close();
     return;
-}
-
-void sendFunds(std::string wif){
-    std::string command = "python3 send.py \"" + wif + "\" \"" + destination + "\"";
-    int result = std::system(command.c_str());
-    if (result == 0) {
-        std::cout << green << "Transação realizada com sucesso!" << std::endl;
-    } else {
-        std::cout << red << "Erro ao realizar a transação." << std::endl;
-    }
 }
 
 void testSpeed(){
