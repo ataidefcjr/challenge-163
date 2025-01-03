@@ -100,7 +100,7 @@ std::string generate_random_prefix(){
         ss << std::hex << hex_chars[gen()%16];
     }
     //Last key for "z"
-    ss << std::hex << hex_chars[(gen()%8)+8];
+    ss << std::hex << hex_chars[(gen()%7)+9];
     
     return ss.str();
 
