@@ -513,7 +513,7 @@ int main(int argc, char* argv[]){
         std::cout << reset << " Donations: " << yellow << "bc1qych3lyjyg3cse6tjw7m997ne83fyye4des99a9" << std::endl ;
         std::cout << reset << "\n Starting search on Address: " << green << target_address << std::endl;
         std::cout << reset << " Partial Key: " << green << partial_key << std::endl;
-        std::cout << reset << " Difficult: "<< red << (xcounter * 4) + (z_counter * 2)  << " bits"<< std::endl;
+        std::cout << reset << " Difficult: "<< red << (xcounter * 4) + (zcounter * 2) << " bits"<< std::endl;
         std::cout << reset << "\n Processes: "<< green << num_processes << reset << " Threads: " << green << num_threads << std::endl;
         
         if (send){
