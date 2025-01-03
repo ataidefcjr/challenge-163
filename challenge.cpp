@@ -406,6 +406,7 @@ int main(int argc, char* argv[]){
     std::string config_file = "config.txt";
     int teste = 0;
     int canSave = 0;
+    std::cout.imbue(std::locale("en_US.UTF-8"));
 
     while ((opt = getopt(argc, argv, "t:p:d:i:x:h:s")) != -1) {
         switch (opt) {
@@ -486,7 +487,7 @@ int main(int argc, char* argv[]){
     //Informações sobre a carteira e a chave parcial
     if ( pid != 0 || num_processes == 1){
 
-        std::int64_t total_batches = 1;
+        std::uint64_t total_batches = 1;
         for (int i=0; i < xcounter - 4 ; i++){
             total_batches *= 16;
         }
@@ -497,7 +498,6 @@ int main(int argc, char* argv[]){
         std::cout << reset << " Partial Key: " << green << partial_key << std::endl;
         std::cout << reset << " Difficult: "<< red << xcounter * 4 << " bits"<< std::endl;
         std::cout << reset << "\n Processes: "<< green << num_processes << reset << " Threads: " << green << num_threads << std::endl;
-        std::cout.imbue(std::locale("C.UTF-8"));
         
         if (send){
             std::cout << reset << "\n Destination Address: " << green << destination << "" << std::endl;  
@@ -514,8 +514,8 @@ int main(int argc, char* argv[]){
             std::cout << red << "\n ------ Testing with puzzle 66 address ------\n" << std::endl;
         }
 
-        std::int64_t already_verified = random_prefixes.size();
-        if (total_batches <= already_verified && total_batches > 1){
+        std::uint64_t already_verified_batches = random_prefixes.size();
+        if (total_batches <= already_verified_batches && total_batches > 1){
             std::cout << red << "Key already found, check key.txt with command 'cat key.txt', if not, delete all .txt" << std::endl;
             kill(0, SIGKILL);
         }
@@ -526,8 +526,9 @@ int main(int argc, char* argv[]){
 
             auto current_time = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double> elapsed = current_time - start_time;
-    
-            std::int64_t keys_verified = batch_size * (verified_batches - already_verified) * num_processes;
+
+            std::uint64_t keys_already_verified = batch_size * already_verified_batches;
+            std::uint64_t keys_verified = batch_size * verified_batches * num_processes;
 
             std::double_t keys_per_second = keys_verified / elapsed.count();
             
@@ -535,18 +536,22 @@ int main(int argc, char* argv[]){
             std::double_t eta = ((total_batches - verified_batches) / batches_per_second) / 60 / 60 / 24;
 
             if (keys_per_second != 0){
-                std::cout.imbue(std::locale("C.UTF-8"));
-                std::cout << reset << "\r Speed: " << green << keys_per_second 
-                << reset << " Keys/s - Verified Keys: " << green << keys_verified;
+                if (static_cast<int>(elapsed.count()) % (refresh_time * 30) == 0){
+                   std::cout << "" << std::endl;
+                }
+                std::cout << reset << "\r Speed: " << green << static_cast<int>(keys_per_second) 
+                << reset << " Keys/s - Verified Keys: " << green << keys_verified + keys_already_verified;
                 
                 if (xcounter <= 13){
-                    std::cout << reset << " - ETA: " <<  green << eta <<reset << " days" << reset;
+                    std::cout << reset << " - ETA: " <<  green << static_cast<int>(eta) <<reset << " days" << reset;
                 }
-                std::cout << reset << " - Last Key: " << green << last_key << "      ";
+                std::cout << reset << " - Last Key: " << green << last_key << "  ";
                 std::cout << std::flush;
+
             } else {
-                std::cout << "\r Wait..." << std::flush;
+                std::cout << "\r Starting..." << std::flush;
             }
+
             std::this_thread::sleep_for(std::chrono::milliseconds(refresh_time * 1000));
 
         }
