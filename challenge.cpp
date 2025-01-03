@@ -566,6 +566,11 @@ int main(int argc, char* argv[]){
 
         }
     }
+    // Aguarda todas as threads finalizarem
+    for (int i = 0; i < num_threads; i++)
+    {
+        pthread_join(threads[i], nullptr);
+    }
 
     return 0;
 }
