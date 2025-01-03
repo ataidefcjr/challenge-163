@@ -406,7 +406,7 @@ int main(int argc, char* argv[]){
     std::string config_file = "config.txt";
     int teste = 0;
     int canSave = 0;
-    std::cout.imbue(std::locale("en_US.UTF-8"));
+    std::cout.imbue(std::locale("C.UTF-8"));
 
     while ((opt = getopt(argc, argv, "t:p:d:i:x:h:s")) != -1) {
         switch (opt) {
