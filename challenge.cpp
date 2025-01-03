@@ -99,13 +99,13 @@ std::string generate_random_prefix(){
     for (int i=0; i<x_positions.size() - 4; i++){
         ss << std::hex << hex_chars[gen()%16];
     }
-
+    //Last key for "z"
+    ss << std::hex << hex_chars[(gen()%8)+8];
+    
     return ss.str();
 
 }
 
-unsigned int z_counter = 0;
-std::string z_chars = "89abcdef";
 // Função para gerar as chaves
 std::string generate_random_key(std::vector<std::string> &output_key) {
     
@@ -136,7 +136,7 @@ std::string generate_random_key(std::vector<std::string> &output_key) {
                 new_key[i] = random_prefix[x_index++];
             }
             if (partial_key[i] == 'z'){
-                new_key[i] = z_chars[z_counter+1];
+                new_key[i] = random_prefix[random_prefix.size()-1];
             }
         }        
 
@@ -159,14 +159,7 @@ std::string generate_random_key(std::vector<std::string> &output_key) {
 
         // Armazena a chave gerada no vetor de saída
         output_key[position] = new_key;
-
     }
-    pthread_mutex_lock(&counter_lock);
-    z_counter ++;
-    if (z_counter == 8){
-        z_counter = 0;
-    }
-    pthread_mutex_unlock(&counter_lock);
 
     return random_prefix;
 }
