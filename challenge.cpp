@@ -104,6 +104,8 @@ std::string generate_random_prefix(){
 
 }
 
+unsigned int z_counter = 0;
+std::string z_chars = "89abcdef";
 // Função para gerar as chaves
 std::string generate_random_key(std::vector<std::string> &output_key) {
     
@@ -133,7 +135,11 @@ std::string generate_random_key(std::vector<std::string> &output_key) {
             if (partial_key[i] == 'x' && x_index < x_positions.size()-4) {
                 new_key[i] = random_prefix[x_index++];
             }
-        }
+            if (partial_key[i] == 'z'){
+                new_key[i] = z_chars[z_counter+1];
+            }
+        }        
+
 
         // Geração dos 4 últimos 'x's sequenciais
         std::stringstream seq_ss;
@@ -155,6 +161,13 @@ std::string generate_random_key(std::vector<std::string> &output_key) {
         output_key[position] = new_key;
 
     }
+    pthread_mutex_lock(&counter_lock);
+    z_counter ++;
+    if (z_counter == 8){
+        z_counter = 0;
+    }
+    pthread_mutex_unlock(&counter_lock);
+
     return random_prefix;
 }
 
@@ -448,10 +461,14 @@ int main(int argc, char* argv[]){
     decodeBase58(target_address, decoded_target_address);
 
     int xcounter = 0;
+    int zcounter = 0;
     for (int i=0; i<partial_key.size(); i++){
         if (partial_key[i] == 'x'){
             xcounter ++;
             x_positions.push_back(i);
+        }
+        if (partial_key[i] == 'z'){
+            zcounter ++;
         }
     }
 
@@ -496,7 +513,7 @@ int main(int argc, char* argv[]){
         std::cout << reset << " Donations: " << yellow << "bc1qych3lyjyg3cse6tjw7m997ne83fyye4des99a9" << std::endl ;
         std::cout << reset << "\n Starting search on Address: " << green << target_address << std::endl;
         std::cout << reset << " Partial Key: " << green << partial_key << std::endl;
-        std::cout << reset << " Difficult: "<< red << xcounter * 4 << " bits"<< std::endl;
+        std::cout << reset << " Difficult: "<< red << (xcounter * 4) + (z_counter * 2)  << " bits"<< std::endl;
         std::cout << reset << "\n Processes: "<< green << num_processes << reset << " Threads: " << green << num_threads << std::endl;
         
         if (send){
