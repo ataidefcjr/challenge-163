@@ -98,8 +98,13 @@ std::string generate_random_prefix(){
     for (int i=0; i<x_positions.size() - 4; i++){
         ss << std::hex << hex_chars[gen()%16];
     }
-    //Last key for "z"
+    //key for "z"
     ss << std::hex << hex_chars[(gen()%7)+9];
+    //key for "y"
+    int y_position = gen()%13;
+    ss << std::hex << hex_chars[y_position];
+    //key for "w"
+    ss << std::hex << hex_chars[y_position+3];
     
     return ss.str();
 
@@ -132,9 +137,12 @@ std::string generate_random_key(std::vector<std::string> &output_key) {
         int x_index = 0;
         for (int i = 0; i < partial_key.size(); i++){
             if (partial_key[i] == 'x' && x_index < x_positions.size()-4) {
-                new_key[i] = random_prefix[x_index++];
+                new_key[i] = random_prefix[random_prefix.size()-3];
             }
-            if (partial_key[i] == 'z'){
+            if (partial_key[i] == 'y'){
+                new_key[i] = random_prefix[random_prefix.size()-2];
+            }
+            if (partial_key[i] == 'w'){
                 new_key[i] = random_prefix[random_prefix.size()-1];
             }
         }        
@@ -398,7 +406,6 @@ void testSpeed(){
     auto check_finish_time = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> check_elapsed = check_finish_time - check_start_time;
     std::cout << "Time to create and check: " << batch_size*mult << " Addresses: " << check_elapsed.count()*1000 << " ms." << std::endl;
-
 }
 
 int main(int argc, char* argv[]){
@@ -448,12 +455,20 @@ int main(int argc, char* argv[]){
 
         int xcounter = 0;
         int zcounter = 0;
+        int wcounter = 0;
+        int ycounter = 0;
         for (int i=0; i<partial_key.size(); i++){
             if (partial_key[i] == 'x'){
                 xcounter ++;
                 x_positions.push_back(i);
             }
             if (partial_key[i] == 'z'){
+                zcounter ++;
+            }
+            if (partial_key[i] == 'y'){
+                zcounter ++;
+            }
+            if (partial_key[i] == 'w'){
                 zcounter ++;
             }
         }
@@ -485,6 +500,9 @@ int main(int argc, char* argv[]){
         }
         for (int i=0; i < zcounter ; i++){
             total_batches *= 7;
+        }
+        for (int i=0; i < ycounter ; i++){
+            total_batches *= 13;
         }
 
         std::cout << reset << "\n Made by " << yellow << "Ataide Freitas" << blue << " https://github.com/ataidefcjr" << std::endl;
