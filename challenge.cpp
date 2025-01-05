@@ -30,12 +30,11 @@ std::vector<std::string> random_prefixes;
 std::int64_t verified_batches;
 std::int32_t const batch_size = 65536; //Do not change, equals to 16 ^ 4
 int refresh_time;
-int num_processes; 
 int num_threads;
 bool save = 0;
 bool send = 0;
 std::atomic<bool> found=0; 
-std::string destination;
+std::string destination;    
 std::string partial_key;
 std::string target_address;
 std::string last_key;
@@ -224,7 +223,6 @@ void privateKeyToBitcoinAddress(std::vector<std::vector<uint8_t>> &generated_add
         SHA256_Update(&sctx, sha256Buffer.data(), sha256Buffer.size());
         SHA256_Final(sha256Buffer.data(), &sctx);
 
-
         // Monta o endereço final (versão + hash + checksum)
         std::copy(prefixedHash.begin(), prefixedHash.end(), finalHash.begin());
         std::copy(sha256Buffer.begin(), sha256Buffer.begin() + 4, finalHash.begin() + 21);
@@ -352,17 +350,16 @@ void *bruteforce_worker(void *args)
 }
 
 void print_help(){
-    std::cout << "\n Usage: ./challenge [-t <threads_number>] [-p <processes_number>] [-d <yout_bitcoin_address>] [-i <configfile.txt>] [-h]" << std::endl;
+    std::cout << "\n Usage: ./challenge [-t <threads_number>] [-d <yout_bitcoin_address>] [-i <configfile.txt>] [-h]" << std::endl;
     std::cout << "\n Options:" << std::endl;
     std::cout << "    -t <threads_number>       Set the number of threads (default: 12)" << std::endl;
-    std::cout << "    -p <processes_number>     Set the number of processes (default: 1)" << std::endl;
     std::cout << "    -d <destination_address>  Set the destination address to transfer funds immediately" << std::endl;
     std::cout << "    -i <config_file>          Set the configuration file (default: config.txt), only to less 44 bits difficult" << std::endl;
     std::cout << "    -s                        Save your progress on {partial_key}.txt" << std::endl;
     std::cout << "    -h                        Show this message\n" << std::endl;
     std::cout << "    The config file must have partial key on first line and address on second line" << std::endl;
     std::cout << "    Processes multiplicate Threads, be aware of high values.\n" << std::endl;
-    std::cout << "    I suggest to use -p (half of cores your processor has) and -t 2\n" << std::endl;
+    std::cout << "    I suggest to use -t with at least half of your processor cores.\n" << std::endl;
     std::cout << reset << "  Made by " << yellow << "Ataide Freitas" << blue << " https://github.com/ataidefcjr" << std::endl;
     std::cout << reset << "  Donations: " << yellow << "bc1qych3lyjyg3cse6tjw7m997ne83fyye4des99a9\n" << std::endl ;
 }
@@ -405,101 +402,89 @@ void testSpeed(){
 }
 
 int main(int argc, char* argv[]){
-    refresh_time = 1;
-    num_processes = 1;
-    num_threads = 12;
-    int opt;
-    std::string config_file = "config.txt";
-    int teste = 0;
-    int canSave = 0;
-    std::cout.imbue(std::locale("C.UTF-8"));
+    try{
+        refresh_time = 1;
+        num_threads = 12;
+        int opt;
+        std::string config_file = "config.txt";
+        int teste = 0;
+        int canSave = 0;
+        std::cout.imbue(std::locale("C.UTF-8"));
 
-    while ((opt = getopt(argc, argv, "t:p:d:i:x:h:s")) != -1) {
-        switch (opt) {
-            case 't':
-                num_threads = std::atoi(optarg);
-                num_threads = validate_input(num_threads, "threads_number");
-                break;
-            case 'p':
-                num_processes = std::atoi(optarg); 
-                num_processes = validate_input(num_processes, "processes_number");
-                break;
-            case 'd':
-                destination = optarg; 
-                send = 1;
-                break;
-            case 'i':
-                config_file = optarg; 
-                break;
-            case 'x':
-                teste = 1;
-                break;
-            case 'h':
-                print_help(); 
-                return 0;
-            case 's':
-                save = 1; 
-                break;
-            default:
-                std::cerr << "\n Invalid Input." << std::endl;
-                print_help();
-                return 1;
+        while ((opt = getopt(argc, argv, "t:d:i:x:h:s")) != -1) {
+            switch (opt) {
+                case 't':
+                    num_threads = std::atoi(optarg);
+                    num_threads = validate_input(num_threads, "threads_number");
+                    break;
+                case 'd':
+                    destination = optarg; 
+                    send = 1;
+                    break;
+                case 'i':
+                    config_file = optarg; 
+                    break;
+                case 'x':
+                    teste = 1;
+                    break;
+                case 'h':
+                    print_help(); 
+                    return 0;
+                case 's':
+                    save = 1; 
+                    break;
+                default:
+                    std::cerr << "\n Invalid Input." << std::endl;
+                    print_help();
+                    return 1;
+            }
         }
-    }
 
-    KeyConfig config = readConfigFromFile(config_file);
+        KeyConfig config = readConfigFromFile(config_file);
 
-    partial_key = config.partial_key;
-    target_address = config.target_address;
-    decodeBase58(target_address, decoded_target_address);
+        partial_key = config.partial_key;
+        target_address = config.target_address;
+        decodeBase58(target_address, decoded_target_address);
 
-    int xcounter = 0;
-    int zcounter = 0;
-    for (int i=0; i<partial_key.size(); i++){
-        if (partial_key[i] == 'x'){
-            xcounter ++;
-            x_positions.push_back(i);
+        int xcounter = 0;
+        int zcounter = 0;
+        for (int i=0; i<partial_key.size(); i++){
+            if (partial_key[i] == 'x'){
+                xcounter ++;
+                x_positions.push_back(i);
+            }
+            if (partial_key[i] == 'z'){
+                zcounter ++;
+            }
         }
-        if (partial_key[i] == 'z'){
-            zcounter ++;
+
+        // Carrega os prefixos já pesquisados na memória
+        load_checked();
+
+        if (teste) {
+            testSpeed();
+            exit(1);
         }
-    }
 
-    // Carrega os prefixos já pesquisados na memória
-    load_checked();
+        // Configura as threads
+        pthread_t threads[num_threads]; 
+        ThreadArgs thread_args[num_threads];
+        for (int i = 0; i < num_threads; i++)
+        {
+            thread_args[i].thread_id = i;
+            thread_args[i].refresh_time = refresh_time;
+            thread_args[i].batch_size = batch_size;
 
-    if (teste) {
-        testSpeed();
-        exit(1);
-    }
-
-    pid_t pid;
-
-    for (int i=1; i < num_processes; i++){
-        pid = fork();
-        if (pid == 0){
-            break;
+            pthread_create(&threads[i], nullptr, bruteforce_worker, &thread_args[i]);
         }
-    }
 
-    // Configura as threads
-    pthread_t threads[num_threads]; 
-    ThreadArgs thread_args[num_threads];
-    for (int i = 0; i < num_threads; i++)
-    {
-        thread_args[i].thread_id = i;
-        thread_args[i].refresh_time = refresh_time;
-        thread_args[i].batch_size = batch_size;
-
-        pthread_create(&threads[i], nullptr, bruteforce_worker, &thread_args[i]);
-    }
-
-    //Informações sobre a carteira e a chave parcial
-    if ( pid != 0 || num_processes == 1){
-
+        //Informações sobre a carteira e a chave parcial
         std::uint64_t total_batches = 1;
         for (int i=0; i < xcounter - 4 ; i++){
             total_batches *= 16;
+        }
+        for (int i=0; i < zcounter ; i++){
+            total_batches *= 7;
         }
 
         std::cout << reset << "\n Made by " << yellow << "Ataide Freitas" << blue << " https://github.com/ataidefcjr" << std::endl;
@@ -507,7 +492,7 @@ int main(int argc, char* argv[]){
         std::cout << reset << "\n Starting search on Address: " << green << target_address << std::endl;
         std::cout << reset << " Partial Key: " << green << partial_key << std::endl;
         std::cout << reset << " Difficult: "<< red << (xcounter * 4) + (zcounter * 2) << " bits"<< std::endl;
-        std::cout << reset << "\n Processes: "<< green << num_processes << reset << " Threads: " << green << num_threads << std::endl;
+        std::cout << reset << "\n Threads: " << green << num_threads << std::endl;
         
         if (send){
             std::cout << reset << "\n Destination Address: " << green << destination << "" << std::endl;  
@@ -538,22 +523,26 @@ int main(int argc, char* argv[]){
             std::chrono::duration<double> elapsed = current_time - start_time;
 
             std::uint64_t keys_already_verified = batch_size * already_verified_batches;
-            std::uint64_t keys_verified = batch_size * verified_batches * num_processes;
+            std::uint64_t keys_verified = batch_size * verified_batches;
 
             std::double_t keys_per_second = keys_verified / elapsed.count();
             
             std::double_t batches_per_second = keys_per_second / batch_size;
-            std::double_t eta = ((total_batches - verified_batches) / batches_per_second) / 60 / 60 / 24;
-
+            std::double_t s_eta = (total_batches - verified_batches - already_verified_batches) / batches_per_second;
+            std::double_t m_eta = s_eta / 60;
+            std::double_t h_eta = m_eta / 60;
+            std::double_t d_eta = h_eta / 24;
+            std::double_t y_eta = d_eta / 365;
+            
             if (keys_per_second != 0){
-                if (static_cast<int>(elapsed.count()) % (refresh_time * 30) == 0){
-                   std::cout << "" << std::endl;
+                if (static_cast<int>(elapsed.count()) % (refresh_time * 120) == 0){
+                    std::cout << "" << std::endl;
                 }
                 std::cout << reset << "\r Speed: " << green << static_cast<int>(keys_per_second) 
                 << reset << " Keys/s - Verified Keys: " << green << keys_verified + keys_already_verified;
                 
                 if (xcounter <= 13){
-                    std::cout << reset << " - ETA: " <<  green << static_cast<int>(eta) <<reset << " days" << reset;
+                    std::cout << reset << " - ETA: " <<  green << static_cast<int>(d_eta) <<reset << " days" << reset;
                 }
                 std::cout << reset << " - Last Key: " << green << last_key << "  ";
                 std::cout << std::flush;
@@ -565,11 +554,17 @@ int main(int argc, char* argv[]){
             std::this_thread::sleep_for(std::chrono::milliseconds(refresh_time * 1000));
 
         }
+
+        // Aguarda todas as threads finalizarem
+        for (int i = 0; i < num_threads; i++){
+            pthread_join(threads[i], nullptr);
+        }
     }
-    // Aguarda todas as threads finalizarem
-    for (int i = 0; i < num_threads; i++)
-    {
-        pthread_join(threads[i], nullptr);
+    catch(const std::exception& e){
+        std::cerr << e.what() << '\n';
+    }
+    catch(...){
+        
     }
 
     return 0;
