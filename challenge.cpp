@@ -24,8 +24,7 @@
 // Global Variables
 static secp256k1_context *ctx = secp256k1_context_create(SECP256K1_CONTEXT_SIGN);
 std::string const hex_chars = "0123456789abcdef";
-std::random_device rd;
-std::mt19937 gen(rd()+14061995);
+
 std::vector<std::string> random_prefixes;
 std::int64_t verified_batches;
 std::int32_t const batch_size = 65536; //Do not change, equals to 16 ^ 4
@@ -93,7 +92,8 @@ int validate_input(int value, const std::string& prompt) {
 }
 
 std::string generate_random_prefix(){
-
+    std::random_device rd;
+    std::mt19937 gen(rd()+14061995);
     std::stringstream ss;
     for (int i=0; i<x_positions.size() - 4; i++){
         ss << std::hex << hex_chars[gen()%16];
@@ -231,7 +231,7 @@ void privateKeyToBitcoinAddress(std::vector<std::vector<uint8_t>> &generated_add
     }
     pthread_mutex_lock(&counter_lock);
     verified_batches += 1;
-    last_key = generated_keys[gen() % batch_size-1];
+    last_key = generated_keys[0];
     pthread_mutex_unlock(&counter_lock);
 }
 
