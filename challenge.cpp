@@ -137,6 +137,9 @@ std::string generate_random_key(std::vector<std::string> &output_key) {
         int x_index = 0;
         for (int i = 0; i < partial_key.size(); i++){
             if (partial_key[i] == 'x' && x_index < x_positions.size()-4) {
+                new_key[i] = random_prefix[x_index++];
+            }
+            if (partial_key[i] == 'z'){
                 new_key[i] = random_prefix[random_prefix.size()-3];
             }
             if (partial_key[i] == 'y'){
